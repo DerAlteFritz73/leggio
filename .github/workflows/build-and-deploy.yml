@@ -1,0 +1,45 @@
+name: Build & Deploy APK
+
+# Builds the release APK on every push to main and publishes it to
+# https://leggio.kreilos.fr.
+#
+# This runs on a SELF-HOSTED runner inside WSL Ubuntu-24.04 on the always-on
+# host that also serves leggio.kreilos.fr via nginx. Because the build and the
+# web root live on the same machine, "deploy" is a local file copy: the Gradle
+# chain (assembleRelease -> renameApk -> deployApk) renames the APK to
+# leggio-<version>.apk and runs scripts/deploy-apk.sh, which copies it into
+# /var/www/prod/leggio and regenerates index.html.
+#
+# The runner is registered with labels [self-hosted, linux] and has Flutter on
+# PATH (/opt/flutter/bin) plus ANDROID_HOME=/opt/android-sdk configured via its
+# .env / service environment.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Serialize deploys so two pushes can't clobber index.html.
+concurrency:
+  group: deploy-android
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout (with Git LFS for imslp.db)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Flutter toolchain info
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK and publish
+        # assembleRelease is finalized by renameApk -> deployApk, so this single
+        # command builds, renames and copies the APK to /var/www/prod/leggio.
+        run: flutter build apk --release

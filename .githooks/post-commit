@@ -1,14 +1,15 @@
 #!/bin/sh
 #
-# Post-commit hook: build release APK and deploy to android.kreilos.fr
-# The Gradle task chain (assembleRelease -> renameApk -> deployApk) handles
-# renaming and uploading automatically.
+# Post-commit hook: intentionally does NOT build or deploy anymore.
+#
+# Building the release APK and deploying it to https://leggio.kreilos.fr is now
+# handled in the cloud by the GitHub Actions workflow
+# .github/workflows/build-and-deploy.yml, which runs on every push to main.
+# This keeps commits fast and makes CI the single source of published APKs.
+#
+# To build/deploy locally on demand you can still run:
+#   flutter build apk --release
+# which triggers the Gradle renameApk -> deployApk chain (a local copy into
+# /var/www/prod/leggio, so it only works on the host that serves the site).
 
-echo "Building and deploying APK..."
-flutter build apk --release 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "Build and deploy complete."
-else
-    echo "Warning: APK build/deploy failed (commit is still saved)."
-fi
+exit 0
